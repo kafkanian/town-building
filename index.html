@@ -3,39 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Town Builder v16</title>
+    <title>My Town Builder v19</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: manipulation; }
         .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
-        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 160px; overflow-y: auto; margin-bottom: 10px; }
-        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; }
+        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 140px; overflow-y: auto; margin-bottom: 5px; }
+        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
-        .board-canvas-area { padding: 40px; display: flex; justify-content: center; align-items: center; }
+        .tile-preview { width: 16px; height: 16px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+        .board-canvas-area { padding: 40px 40px 150px 40px; display: flex; justify-content: center; align-items: center; }
         .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; }
-        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; }
+        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; cursor: pointer; }
        
+        /* --- 미니멀 디자인 타일 CSS --- */
+        /* 잔디: 단순 초록색 */
+        .grass-tile { background-color: #3cb371 !important; } /* MediumSeaGreen */
+        /* 흙바닥: 단순 황토색 */
+        .unpaved-tile { background-color: #cd853f !important; } /* Peru */
+        /* 도로: 검은 바탕 + 노란 중앙선 */
         .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
+        /* 도로 곡선 */
         .road-corner-tile { background-color: #333 !important; background-image: radial-gradient(circle at 100% 0%, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
+        /* 철도: 회색 바탕 + 철길 모양 */
         .rail-tile { background-color: #aaa !important; background-image: linear-gradient(0deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(90deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
+        /* 철도 곡선 */
         .rail-corner-tile { background-color: #aaa !important; background-image: radial-gradient(circle at 100% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
+        /* 강: 단순 파란색 */
         .river-tile { background-color: #339af0 !important; }
-        .unpaved-tile { background-color: #cc9966 !important; }
        
         .building-host { font-size: 50px !important; z-index: 10 !important; overflow: visible !important; pointer-events: none; width: 60px !important; height: 60px !important; }
         .building-host-3x3 { font-size: 80px !important; width: 90px !important; height: 90px !important; }
-
-        .footer-ui { position: fixed; bottom: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90%; max-width: 400px; z-index: 1000; }
-        button { padding: 12px 5px; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.9); padding: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        button { padding: 10px 5px; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; color: white; }
         .btn-undo { background: #fd7e14; }
         .btn-rotate { background: #4dabf7; }
         .btn-save { background: #40c057; }
-        .btn-reset { background: #fa5252; grid-column: span 3; padding: 6px; font-size: 11px; }
+        .btn-reset { background: #fa5252; grid-column: span 3; padding: 5px; font-size: 11px; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 16px;">🏙️ 회전 기능 수리 완료 (v16)</h3>
+        <h3 style="margin: 5px 0; font-size: 15px;">🏙️ v19: 미니멀 잔디 & 흙바닥 타일</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
@@ -43,24 +53,25 @@
     </div>
     <div class="footer-ui">
         <button class="btn-undo" onclick="undo()">↩️ 취소</button>
-        <button class="btn-rotate" onclick="rotatePreview()">🔄 회전하기</button>
+        <button class="btn-rotate" onclick="rotatePreview()">🔄 배치회전</button>
         <button class="btn-save" onclick="saveImage()">🖼️ 저장</button>
         <button class="btn-reset" onclick="resetBoard()">🔄 초기화</button>
     </div>
 
     <script>
         const tiles = [
-            {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, {n:"산", i:"⛰️", t:"3x3"}, 
-            {n:"강", i:"", c:"river-tile", t:"1x1"}, {n:"공원", i:"⛲", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"},
-            {n:"체육시설", i:"🏋️", t:"2x2"}, {n:"도로", i:"", c:"road-tile", t:"1x1"}, 
-            {n:"도로곡선", i:"", c:"road-corner-tile", t:"1x1"}, {n:"철도", i:"", c:"rail-tile", t:"1x1"}, 
-            {n:"철도곡선", i:"", c:"rail-corner-tile", t:"1x1"}, {n:"주택", i:"🏡", t:"2x2"}, 
-            {n:"빌딩", i:"🏢", t:"2x2"}, {n:"학교", i:"🏫", t:"2x2"}, {n:"약국", i:"💊", t:"2x2"}, 
-            {n:"병원", i:"🏥", t:"2x2"}, {n:"경찰서", i:"🚔", t:"2x2"}, {n:"소방서", i:"🚒", t:"2x2"}, 
-            {n:"센터", i:"🏛️", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"}, {n:"카페", i:"☕", t:"2x2"}, 
-            {n:"마트", i:"🏬", t:"2x2"}, {n:"주유소", i:"⛽", t:"1x1"}, {n:"지하철", i:"🚉", t:"2x2"}, 
-            {n:"버스", i:"🚏", t:"1x1"}, {n:"경기장", i:"🏟️", t:"2x2"}, {n:"수영장", i:"🏊", t:"2x2"}, 
-            {n:"도서관", i:"📖", t:"2x2"}, {n:"지우개", i:"", t:"eraser"}
+            {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, 
+            {n:"잔디", i:"", c:"grass-tile", t:"1x1", hex: "#3cb371"}, {n:"흙바닥", i:"", c:"unpaved-tile", t:"1x1", hex: "#cd853f"},
+            {n:"산", i:"⛰️", t:"3x3"}, {n:"강", i:"", c:"river-tile", t:"1x1"}, 
+            {n:"공원", i:"⛲", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"}, {n:"체육시설", i:"🏋️", t:"2x2"}, 
+            {n:"도로", i:"", c:"road-tile", t:"1x1"}, {n:"도로곡선", i:"", c:"road-corner-tile", t:"1x1"}, 
+            {n:"철도", i:"", c:"rail-tile", t:"1x1"}, {n:"철도곡선", i:"", c:"rail-corner-tile", t:"1x1"}, 
+            {n:"주택", i:"🏡", t:"2x2"}, {n:"빌딩", i:"🏢", t:"2x2"}, {n:"학교", i:"🏫", t:"2x2"}, 
+            {n:"약국", i:"💊", t:"2x2"}, {n:"병원", i:"🏥", t:"2x2"}, {n:"경찰서", i:"🚔", t:"2x2"}, 
+            {n:"소방서", i:"🚒", t:"2x2"}, {n:"센터", i:"🏛️", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"}, 
+            {n:"카페", i:"☕", t:"2x2"}, {n:"마트", i:"🏬", t:"2x2"}, {n:"주유소", i:"⛽", t:"1x1"}, 
+            {n:"지하철", i:"🚉", t:"2x2"}, {n:"버스", i:"🚏", t:"1x1"}, {n:"경기장", i:"🏟️", t:"2x2"}, 
+            {n:"수영장", i:"🏊", t:"2x2"}, {n:"도서관", i:"📖", t:"2x2"}, {n:"지우개", i:"", t:"eraser"}
         ];
 
         let selected = tiles[0];
@@ -75,26 +86,32 @@
             const btn = document.createElement('div');
             btn.className = 'tile-btn';
             if(t === selected) btn.classList.add('active');
-            btn.innerHTML = `<span>${t.i || '🧹'}</span><br>${t.n}`;
+           
+            // 팔레트 미리보기 설정
+            let preview = "";
+            if (t.t === "eraser") { preview = `<div class="tile-preview" style="font-size:10px;">🧹</div>`; }
+            else if (t.i) { preview = `<div class="tile-preview">${t.i}</div>`; }
+            else if (t.c === "road-tile") { preview = `<div class="tile-preview" style="background:#333;border-left:2px solid #FFD700;border-right:2px solid #FFD700;"></div>`; }
+            else if (t.c === "road-corner-tile") { preview = `<div class="tile-preview" style="background:#333;border-bottom:2px solid #FFD700;border-right:2px solid #FFD700;"></div>`; }
+            else if (t.c === "rail-tile") { preview = `<div class="tile-preview" style="background:#aaa;border:1px dashed #444;"></div>`; }
+            else if (t.hex) { preview = `<div class="tile-preview" style="background:${t.hex};"></div>`; }
+            else if (t.c) { preview = `<div class="tile-preview ${t.c}"></div>`; }
+
+            btn.innerHTML = `${preview}${t.n}`;
             btn.onclick = () => {
                 document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 selected = t;
-                globalRot = 0; // 새 타일 선택 시 회전 초기화
             };
             pEl.appendChild(btn);
         });
 
-        // 🔄 회전 버튼 클릭 시 실행되는 함수
-        function rotatePreview() {
-            globalRot = (globalRot + 90) % 360;
-            alert(`타일이 ${globalRot}도 회전되었습니다. 이제 보드에 배치해 보세요!`);
-        }
+        function rotatePreview() { globalRot = (globalRot + 90) % 360; }
 
         function saveState() {
-            if (history.length > 20) history.shift();
+            if (history.length > 30) history.shift();
             history.push(cells.map(c => ({ 
-                html: c.innerHTML, className: c.className, rot: c.dataset.rotation, 
+                html: c.innerHTML, className: c.className, rot: c.dataset.rotation || "0", 
                 parentIdx: c.dataset.parentIdx, size: c.dataset.size 
             })));
         }
@@ -103,31 +120,27 @@
             if (history.length === 0) return;
             const last = history.pop();
             cells.forEach((c, i) => {
-                c.innerHTML = last[i].html;
-                c.className = last[i].className;
-                c.dataset.rotation = last[i].rot;
-                c.dataset.parentIdx = last[i].parentIdx;
-                c.dataset.size = last[i].size;
-                c.style.transform = `rotate(${last[i].rot || 0}deg)`;
+                const data = last[i];
+                c.innerHTML = data.html; c.className = data.className; c.dataset.rotation = data.rot;
+                if (data.parentIdx !== undefined) c.dataset.parentIdx = data.parentIdx; else delete c.dataset.parentIdx;
+                if (data.size !== undefined) c.dataset.size = data.size; else delete c.dataset.size;
+                c.style.transform = `rotate(${data.rot}deg)`;
             });
         }
 
         function clearTile(idx) {
-            const startCell = cells[idx];
-            if (!startCell || startCell.dataset.parentIdx === undefined) return;
-            const parentIdx = parseInt(startCell.dataset.parentIdx);
-            const parentCell = cells[parentIdx];
-            const size = parseInt(parentCell.dataset.size) || 1;
+            const cell = cells[idx];
+            if (!cell || cell.dataset.parentIdx === undefined) return;
+            const pIdx = parseInt(cell.dataset.parentIdx);
+            const pCell = cells[pIdx];
+            const size = parseInt(pCell.dataset.size) || 1;
             for(let r=0; r<size; r++) {
                 for(let cl=0; cl<size; cl++) {
-                    const tIdx = parentIdx + (r * gridSize) + cl;
+                    const tIdx = pIdx + (r * gridSize) + cl;
                     if (cells[tIdx]) {
-                        cells[tIdx].innerHTML = ""; 
-                        cells[tIdx].className = 'cell';
-                        cells[tIdx].dataset.rotation = "0";
-                        delete cells[tIdx].dataset.parentIdx;
-                        delete cells[tIdx].dataset.size;
+                        cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
                         cells[tIdx].style.transform = "rotate(0deg)";
+                        delete cells[tIdx].dataset.rotation; delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size;
                     }
                 }
             }
@@ -137,23 +150,31 @@
             const c = document.createElement('div');
             c.className = 'cell';
             c.dataset.index = i;
-
             c.onclick = () => {
                 const idx = parseInt(c.dataset.index);
                 if (selected.t === "eraser") {
                     if (c.dataset.parentIdx !== undefined) { saveState(); clearTile(idx); }
                     return;
                 }
+                if (c.dataset.parentIdx !== undefined) {
+                    const pIdx = parseInt(c.dataset.parentIdx);
+                    if (pIdx === idx) {
+                        saveState();
+                        let currentRot = parseInt(c.dataset.rotation) || 0;
+                        let nextRot = (currentRot + 90) % 360;
+                        c.dataset.rotation = nextRot;
+                        c.style.transform = `rotate(${nextRot}deg)`;
+                        return;
+                    }
+                }
                 const row = Math.floor(idx / gridSize);
                 const col = idx % gridSize;
                 let s = selected.t === "2x2" ? 2 : (selected.t === "3x3" ? 3 : 1);
-
                 if (row <= gridSize - s && col <= gridSize - s) {
                     let isBlocked = false;
                     for(let r=0; r<s; r++) {
                         for(let cl=0; cl<s; cl++) {
-                            const tIdx = idx + (r * gridSize) + cl;
-                            if (cells[tIdx].dataset.parentIdx !== undefined) { isBlocked = true; break; }
+                            if (cells[idx + (r * gridSize) + cl].dataset.parentIdx !== undefined) { isBlocked = true; break; }
                         }
                     }
                     if (!isBlocked) {
@@ -161,17 +182,15 @@
                         for(let r=0; r<s; r++) {
                             for(let cl=0; cl<s; cl++) {
                                 const tIdx = idx + (r * gridSize) + cl;
-                                const tCell = cells[tIdx];
-                                tCell.innerHTML = ""; tCell.className = 'cell';
-                                tCell.dataset.parentIdx = idx;
+                                cells[tIdx].dataset.parentIdx = idx;
                                 if(r === 0 && cl === 0) {
-                                    tCell.innerText = selected.i;
-                                    tCell.dataset.size = s;
-                                    if(selected.c) tCell.classList.add(selected.c);
-                                    if(s === 2) tCell.classList.add('building-host');
-                                    if(s === 3) tCell.classList.add('building-host', 'building-host-3x3');
-                                    tCell.style.transform = `rotate(${globalRot}deg)`;
-                                    tCell.dataset.rotation = globalRot;
+                                    cells[tIdx].innerText = selected.i;
+                                    cells[tIdx].dataset.size = s;
+                                    if(selected.c) cells[tIdx].classList.add(selected.c);
+                                    if(s === 2) cells[tIdx].classList.add('building-host');
+                                    if(s === 3) cells[tIdx].classList.add('building-host', 'building-host-3x3');
+                                    cells[tIdx].style.transform = `rotate(${globalRot}deg)`;
+                                    cells[tIdx].dataset.rotation = globalRot;
                                 }
                             }
                         }
@@ -181,21 +200,6 @@
                     }
                 }
             };
-
-            // 📱 길게 눌러서 회전 (모바일용)
-            let timer;
-            c.addEventListener('touchstart', () => {
-                timer = setTimeout(() => {
-                    if(c.dataset.parentIdx !== undefined && c.dataset.parentIdx == c.dataset.index) {
-                        saveState();
-                        let r = (parseInt(c.dataset.rotation) || 0) + 90;
-                        c.dataset.rotation = r % 360;
-                        c.style.transform = `rotate(${c.dataset.rotation}deg)`;
-                    }
-                }, 600);
-            });
-            c.addEventListener('touchend', () => clearTimeout(timer));
-
             bEl.appendChild(c);
             cells.push(c);
         }
@@ -203,12 +207,12 @@
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v16.png'; a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v19_minimal.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
         function resetBoard() {
-            if(confirm("전체 초기화할까요?")) {
+            if(confirm("정말 초기화할까요?")) {
                 saveState();
                 cells.forEach(c => { 
                     c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; 
