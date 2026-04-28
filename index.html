@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Town Builder v15</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: manipulation; }
+        .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
+        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 160px; overflow-y: auto; margin-bottom: 10px; }
+        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; }
+        .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
+        .board-canvas-area { padding: 40px; display: flex; justify-content: center; align-items: center; }
+        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; }
+        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; transition: background-color 0.1s; }
+       
+        /* 특수 디자인 타일 */
+        .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
+        .road-corner-tile { background-color: #333 !important; background-image: radial-gradient(circle at 100% 0%, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
+        .rail-tile { background-color: #aaa !important; background-image: linear-gradient(0deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(90deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
+        .rail-corner-tile { background-color: #aaa !important; background-image: radial-gradient(circle at 100% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
+        .river-tile { background-color: #339af0 !important; }
+        .unpaved-tile { background-color: #cc9966 !important; }
+       
+        .building-host { font-size: 50px !important; z-index: 10 !important; overflow: visible !important; pointer-events: none; width: 60px !important; height: 60px !important; }
+        .building-host-3x3 { font-size: 80px !important; width: 90px !important; height: 90px !important; }
+
+        .footer-ui { position: fixed; bottom: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 90%; max-width: 400px; z-index: 1000; }
+        button { padding: 12px 5px; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-undo { background: #fd7e14; }
+        .btn-rotate { background: #4dabf7; }
+        .btn-save { background: #40c057; }
+        .btn-reset { background: #fa5252; grid-column: span 3; padding: 6px; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="header-ui">
+        <h3 style="margin: 5px 0; font-size: 16px;">🏙️ 중복 방지 & 체육시설 추가 (v15)</h3>
+        <div class="palette" id="palette"></div>
+    </div>
+    <div class="board-canvas-area" id="capture-area">
+        <div class="board" id="board"></div>
+    </div>
+    <div class="footer-ui">
+        <button class="btn-undo" onclick="undo()">↩️ 취소</button>
+        <button class="btn-rotate" onclick="rotatePreview()">🔄 회전</button>
+        <button class="btn-save" onclick="saveImage()">🖼️ 저장</button>
+        <button class="btn-reset" onclick="resetBoard()">🔄 초기화</button>
+    </div>
+
+    <script>
+        const tiles = [
+            {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, {n:"산", i:"⛰️", t:"3x3"}, 
+            {n:"강", i:"", c:"river-tile", t:"1x1"}, {n:"공원", i:"⛲", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"},
+            {n:"체육시설", i:"🏋️", t:"2x2"}, {n:"도로", i:"", c:"road-tile", t:"1x1"}, 
+            {n:"도로곡선", i:"", c:"road-corner-tile", t:"1x1"}, {n:"철도", i:"", c:"rail-tile", t:"1x1"}, 
+            {n:"철도곡선", i:"", c:"rail-corner-tile", t:"1x1"}, {n:"주택", i:"🏡", t:"2x2"}, 
+            {n:"빌딩", i:"🏢", t:"2x2"}, {n:"학교", i:"🏫", t:"2x2"}, {n:"약국", i:"💊", t:"2x2"}, 
+            {n:"병원", i:"🏥", t:"2x2"}, {n:"경찰서", i:"🚔", t:"2x2"}, {n:"소방서", i:"🚒", t:"2x2"}, 
+            {n:"센터", i:"🏛️", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"}, {n:"카페", i:"☕", t:"2x2"}, 
+            {n:"마트", i:"🏬", t:"2x2"}, {n:"주유소", i:"⛽", t:"1x1"}, {n:"지하철", i:"🚉", t:"2x2"}, 
+            {n:"버스", i:"🚏", t:"1x1"}, {n:"경기장", i:"🏟️", t:"2x2"}, {n:"수영장", i:"🏊", t:"2x2"}, 
+            {n:"도서관", i:"📖", t:"2x2"}, {n:"지우개", i:"", t:"eraser"}
+        ];
+
+        let selected = tiles[0];
+        let globalRot = 0;
+        const gridSize = 30;
+        const history = []; 
+        const cells = [];
+        const bEl = document.getElementById('board');
+
+        const pEl = document.getElementById('palette');
+        tiles.forEach(t => {
+            const btn = document.createElement('div');
+            btn.className = 'tile-btn';
+            if(t === selected) btn.classList.add('active');
+            btn.innerHTML = `<span>${t.i || '🧹'}</span><br>${t.n}`;
+            btn.onclick = () => {
+                document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selected = t;
+                globalRot = 0;
+            };
+            pEl.appendChild(btn);
+        });
+
+        function rotatePreview() { globalRot = (globalRot + 90) % 360; }
+
+        function saveState() {
+            if (history.length > 20) history.shift();
+            history.push(cells.map(c => ({ 
+                html: c.innerHTML, className: c.className, rot: c.dataset.rotation, 
+                parentIdx: c.dataset.parentIdx, size: c.dataset.size 
+            })));
+        }
+
+        function undo() {
+            if (history.length === 0) return;
+            const last = history.pop();
+            cells.forEach((c, i) => {
+                c.innerHTML = last[i].html;
+                c.className = last[i].className;
+                c.dataset.rotation = last[i].rot;
+                c.dataset.parentIdx = last[i].parentIdx;
+                c.dataset.size = last[i].size;
+                c.style.transform = `rotate(${last[i].rot}deg)`;
+            });
+        }
+
+        function clearTile(idx) {
+            const startCell = cells[idx];
+            if (!startCell || startCell.dataset.parentIdx === undefined) return;
+           
+            const parentIdx = parseInt(startCell.dataset.parentIdx);
+            const parentCell = cells[parentIdx];
+            const size = parseInt(parentCell.dataset.size) || 1;
+
+            for(let r=0; r<size; r++) {
+                for(let cl=0; cl<size; cl++) {
+                    const tIdx = parentIdx + (r * gridSize) + cl;
+                    if (cells[tIdx]) {
+                        cells[tIdx].innerHTML = ""; 
+                        cells[tIdx].className = 'cell';
+                        cells[tIdx].dataset.rotation = "0";
+                        delete cells[tIdx].dataset.parentIdx;
+                        delete cells[tIdx].dataset.size;
+                        cells[tIdx].style.transform = "rotate(0deg)";
+                    }
+                }
+            }
+        }
+
+        for(let i=0; i < gridSize * gridSize; i++) {
+            const c = document.createElement('div');
+            c.className = 'cell';
+            c.dataset.index = i;
+
+            c.onclick = () => {
+                const idx = parseInt(c.dataset.index);
+
+                if (selected.t === "eraser") {
+                    if (c.dataset.parentIdx !== undefined) {
+                        saveState();
+                        clearTile(idx);
+                    }
+                    return;
+                }
+
+                const row = Math.floor(idx / gridSize);
+                const col = idx % gridSize;
+                let s = selected.t === "2x2" ? 2 : (selected.t === "3x3" ? 3 : 1);
+
+                // 중복 배치 및 경계 체크
+                if (row <= gridSize - s && col <= gridSize - s) {
+                    let isBlocked = false;
+                    for(let r=0; r<s; r++) {
+                        for(let cl=0; cl<s; cl++) {
+                            const tIdx = idx + (r * gridSize) + cl;
+                            if (cells[tIdx].dataset.parentIdx !== undefined) {
+                                isBlocked = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isBlocked) {
+                        saveState();
+                        for(let r=0; r<s; r++) {
+                            for(let cl=0; cl<s; cl++) {
+                                const tIdx = idx + (r * gridSize) + cl;
+                                const tCell = cells[tIdx];
+                                tCell.innerHTML = ""; 
+                                tCell.className = 'cell';
+                                tCell.dataset.parentIdx = idx;
+                               
+                                if(r === 0 && cl === 0) {
+                                    tCell.innerText = selected.i;
+                                    tCell.dataset.size = s;
+                                    if(selected.c) tCell.classList.add(selected.c);
+                                    if(s === 2) tCell.classList.add('building-host');
+                                    if(s === 3) tCell.classList.add('building-host', 'building-host-3x3');
+                                    tCell.style.transform = `rotate(${globalRot}deg)`;
+                                    tCell.dataset.rotation = globalRot;
+                                }
+                            }
+                        }
+                    } else {
+                        // 중복 시 경고 효과 (옵션: 빨간색 잠깐 깜빡임)
+                        c.style.backgroundColor = "#ffc9c9";
+                        setTimeout(() => { c.style.backgroundColor = "#fff"; }, 200);
+                    }
+                }
+            };
+
+            let timer;
+            c.ontouchstart = () => { timer = setTimeout(() => {
+                if(c.dataset.parentIdx !== undefined && c.dataset.parentIdx == c.dataset.index) {
+                    saveState();
+                    let r = (parseInt(c.dataset.rotation) || 0) + 90;
+                    c.dataset.rotation = r; c.style.transform = `rotate(${r}deg)`;
+                }
+            }, 500); };
+            c.ontouchend = () => clearTimeout(timer);
+
+            bEl.appendChild(c);
+            cells.push(c);
+        }
+
+        function saveImage() {
+            html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
+                const a = document.createElement('a');
+                a.download = 'town_v15_pro.png';
+                a.href = canvas.toDataURL(); a.click();
+            });
+        }
+
+        function resetBoard() {
+            if(confirm("초기화할까요?")) {
+                saveState();
+                cells.forEach(c => { 
+                    c.className = 'cell'; c.innerHTML = ''; 
+                    c.style.transform = 'rotate(0deg)'; 
+                    delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size;
+                });
+            }
+        }
+    </script>
+</body>
+</html>
+
+
