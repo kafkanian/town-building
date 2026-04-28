@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Town Builder v15</title>
+    <title>My Town Builder v16</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: manipulation; }
@@ -13,9 +13,8 @@
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
         .board-canvas-area { padding: 40px; display: flex; justify-content: center; align-items: center; }
         .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; }
-        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; transition: background-color 0.1s; }
+        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; }
        
-        /* 특수 디자인 타일 */
         .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
         .road-corner-tile { background-color: #333 !important; background-image: radial-gradient(circle at 100% 0%, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
         .rail-tile { background-color: #aaa !important; background-image: linear-gradient(0deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(90deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
@@ -36,7 +35,7 @@
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 16px;">🏙️ 중복 방지 & 체육시설 추가 (v15)</h3>
+        <h3 style="margin: 5px 0; font-size: 16px;">🏙️ 회전 기능 수리 완료 (v16)</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
@@ -44,7 +43,7 @@
     </div>
     <div class="footer-ui">
         <button class="btn-undo" onclick="undo()">↩️ 취소</button>
-        <button class="btn-rotate" onclick="rotatePreview()">🔄 회전</button>
+        <button class="btn-rotate" onclick="rotatePreview()">🔄 회전하기</button>
         <button class="btn-save" onclick="saveImage()">🖼️ 저장</button>
         <button class="btn-reset" onclick="resetBoard()">🔄 초기화</button>
     </div>
@@ -81,12 +80,16 @@
                 document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 selected = t;
-                globalRot = 0;
+                globalRot = 0; // 새 타일 선택 시 회전 초기화
             };
             pEl.appendChild(btn);
         });
 
-        function rotatePreview() { globalRot = (globalRot + 90) % 360; }
+        // 🔄 회전 버튼 클릭 시 실행되는 함수
+        function rotatePreview() {
+            globalRot = (globalRot + 90) % 360;
+            alert(`타일이 ${globalRot}도 회전되었습니다. 이제 보드에 배치해 보세요!`);
+        }
 
         function saveState() {
             if (history.length > 20) history.shift();
@@ -105,18 +108,16 @@
                 c.dataset.rotation = last[i].rot;
                 c.dataset.parentIdx = last[i].parentIdx;
                 c.dataset.size = last[i].size;
-                c.style.transform = `rotate(${last[i].rot}deg)`;
+                c.style.transform = `rotate(${last[i].rot || 0}deg)`;
             });
         }
 
         function clearTile(idx) {
             const startCell = cells[idx];
             if (!startCell || startCell.dataset.parentIdx === undefined) return;
-           
             const parentIdx = parseInt(startCell.dataset.parentIdx);
             const parentCell = cells[parentIdx];
             const size = parseInt(parentCell.dataset.size) || 1;
-
             for(let r=0; r<size; r++) {
                 for(let cl=0; cl<size; cl++) {
                     const tIdx = parentIdx + (r * gridSize) + cl;
@@ -139,42 +140,30 @@
 
             c.onclick = () => {
                 const idx = parseInt(c.dataset.index);
-
                 if (selected.t === "eraser") {
-                    if (c.dataset.parentIdx !== undefined) {
-                        saveState();
-                        clearTile(idx);
-                    }
+                    if (c.dataset.parentIdx !== undefined) { saveState(); clearTile(idx); }
                     return;
                 }
-
                 const row = Math.floor(idx / gridSize);
                 const col = idx % gridSize;
                 let s = selected.t === "2x2" ? 2 : (selected.t === "3x3" ? 3 : 1);
 
-                // 중복 배치 및 경계 체크
                 if (row <= gridSize - s && col <= gridSize - s) {
                     let isBlocked = false;
                     for(let r=0; r<s; r++) {
                         for(let cl=0; cl<s; cl++) {
                             const tIdx = idx + (r * gridSize) + cl;
-                            if (cells[tIdx].dataset.parentIdx !== undefined) {
-                                isBlocked = true;
-                                break;
-                            }
+                            if (cells[tIdx].dataset.parentIdx !== undefined) { isBlocked = true; break; }
                         }
                     }
-
                     if (!isBlocked) {
                         saveState();
                         for(let r=0; r<s; r++) {
                             for(let cl=0; cl<s; cl++) {
                                 const tIdx = idx + (r * gridSize) + cl;
                                 const tCell = cells[tIdx];
-                                tCell.innerHTML = ""; 
-                                tCell.className = 'cell';
+                                tCell.innerHTML = ""; tCell.className = 'cell';
                                 tCell.dataset.parentIdx = idx;
-                               
                                 if(r === 0 && cl === 0) {
                                     tCell.innerText = selected.i;
                                     tCell.dataset.size = s;
@@ -187,22 +176,25 @@
                             }
                         }
                     } else {
-                        // 중복 시 경고 효과 (옵션: 빨간색 잠깐 깜빡임)
                         c.style.backgroundColor = "#ffc9c9";
                         setTimeout(() => { c.style.backgroundColor = "#fff"; }, 200);
                     }
                 }
             };
 
+            // 📱 길게 눌러서 회전 (모바일용)
             let timer;
-            c.ontouchstart = () => { timer = setTimeout(() => {
-                if(c.dataset.parentIdx !== undefined && c.dataset.parentIdx == c.dataset.index) {
-                    saveState();
-                    let r = (parseInt(c.dataset.rotation) || 0) + 90;
-                    c.dataset.rotation = r; c.style.transform = `rotate(${r}deg)`;
-                }
-            }, 500); };
-            c.ontouchend = () => clearTimeout(timer);
+            c.addEventListener('touchstart', () => {
+                timer = setTimeout(() => {
+                    if(c.dataset.parentIdx !== undefined && c.dataset.parentIdx == c.dataset.index) {
+                        saveState();
+                        let r = (parseInt(c.dataset.rotation) || 0) + 90;
+                        c.dataset.rotation = r % 360;
+                        c.style.transform = `rotate(${c.dataset.rotation}deg)`;
+                    }
+                }, 600);
+            });
+            c.addEventListener('touchend', () => clearTimeout(timer));
 
             bEl.appendChild(c);
             cells.push(c);
@@ -211,17 +203,15 @@
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v15_pro.png';
-                a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v16.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
         function resetBoard() {
-            if(confirm("초기화할까요?")) {
+            if(confirm("전체 초기화할까요?")) {
                 saveState();
                 cells.forEach(c => { 
-                    c.className = 'cell'; c.innerHTML = ''; 
-                    c.style.transform = 'rotate(0deg)'; 
+                    c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; 
                     delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size;
                 });
             }
@@ -229,5 +219,3 @@
     </script>
 </body>
 </html>
-
-
