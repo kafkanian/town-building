@@ -3,40 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Town Builder v19</title>
+    <title>My Town Builder v21</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: manipulation; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: none; overflow-x: hidden; }
         .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
         .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 140px; overflow-y: auto; margin-bottom: 5px; }
-        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; }
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
-        .tile-preview { width: 16px; height: 16px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .tile-preview { width: 16px; height: 16px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
 
-        .board-canvas-area { padding: 40px 40px 150px 40px; display: flex; justify-content: center; align-items: center; }
-        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; }
-        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; position: relative; border: 0.1px solid #f0f0f0; box-sizing: border-box; z-index: 1; cursor: pointer; }
+        .board-canvas-area { padding: 40px 40px 150px 40px; }
+        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; position: relative; }
+        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 0.1px solid #f0f0f0; box-sizing: border-box; cursor: pointer; }
        
-        /* --- 미니멀 디자인 타일 CSS --- */
-        /* 잔디: 단순 초록색 */
-        .grass-tile { background-color: #3cb371 !important; } /* MediumSeaGreen */
-        /* 흙바닥: 단순 황토색 */
-        .unpaved-tile { background-color: #cd853f !important; } /* Peru */
-        /* 도로: 검은 바탕 + 노란 중앙선 */
+        .grass-tile { background-color: #3cb371 !important; }
+        .unpaved-tile { background-color: #cd853f !important; }
         .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
-        /* 도로 곡선 */
         .road-corner-tile { background-color: #333 !important; background-image: radial-gradient(circle at 100% 0%, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
-        /* 철도: 회색 바탕 + 철길 모양 */
         .rail-tile { background-color: #aaa !important; background-image: linear-gradient(0deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(90deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
-        /* 철도 곡선 */
         .rail-corner-tile { background-color: #aaa !important; background-image: radial-gradient(circle at 100% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
-        /* 강: 단순 파란색 */
         .river-tile { background-color: #339af0 !important; }
        
         .building-host { font-size: 50px !important; z-index: 10 !important; overflow: visible !important; pointer-events: none; width: 60px !important; height: 60px !important; }
         .building-host-3x3 { font-size: 80px !important; width: 90px !important; height: 90px !important; }
+
+        #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; }
+
         .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.9); padding: 15px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        button { padding: 10px 5px; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; color: white; }
+        button { padding: 10px 5px; font-size: 13px; font-weight: bold; border-radius: 8px; border: none; color: white; cursor: pointer; }
         .btn-undo { background: #fd7e14; }
         .btn-rotate { background: #4dabf7; }
         .btn-save { background: #40c057; }
@@ -45,12 +40,13 @@
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 15px;">🏙️ v19: 미니멀 잔디 & 흙바닥 타일</h3>
+        <h3 style="margin: 5px 0; font-size: 15px;">🏙️ v21: 클릭 회전 & 드래그 통합 완료</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
         <div class="board" id="board"></div>
     </div>
+    <div id="drag-proxy"></div>
     <div class="footer-ui">
         <button class="btn-undo" onclick="undo()">↩️ 취소</button>
         <button class="btn-rotate" onclick="rotatePreview()">🔄 배치회전</button>
@@ -80,28 +76,24 @@
         const history = []; 
         const cells = [];
         const bEl = document.getElementById('board');
+        const proxy = document.getElementById('drag-proxy');
+
+        let isDragging = false;
+        let dragInfo = null;
+        let startX, startY;
+        let dragStartTime = 0;
 
         const pEl = document.getElementById('palette');
         tiles.forEach(t => {
             const btn = document.createElement('div');
             btn.className = 'tile-btn';
             if(t === selected) btn.classList.add('active');
-           
-            // 팔레트 미리보기 설정
-            let preview = "";
-            if (t.t === "eraser") { preview = `<div class="tile-preview" style="font-size:10px;">🧹</div>`; }
-            else if (t.i) { preview = `<div class="tile-preview">${t.i}</div>`; }
-            else if (t.c === "road-tile") { preview = `<div class="tile-preview" style="background:#333;border-left:2px solid #FFD700;border-right:2px solid #FFD700;"></div>`; }
-            else if (t.c === "road-corner-tile") { preview = `<div class="tile-preview" style="background:#333;border-bottom:2px solid #FFD700;border-right:2px solid #FFD700;"></div>`; }
-            else if (t.c === "rail-tile") { preview = `<div class="tile-preview" style="background:#aaa;border:1px dashed #444;"></div>`; }
-            else if (t.hex) { preview = `<div class="tile-preview" style="background:${t.hex};"></div>`; }
-            else if (t.c) { preview = `<div class="tile-preview ${t.c}"></div>`; }
-
-            btn.innerHTML = `${preview}${t.n}`;
+            let pre = t.i ? `<div class="tile-preview">${t.i}</div>` : `<div class="tile-preview" style="background:${t.hex || '#333'}"></div>`;
+            if(t.t === "eraser") pre = `<div class="tile-preview">🧹</div>`;
+            btn.innerHTML = `${pre}${t.n}`;
             btn.onclick = () => {
                 document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                selected = t;
+                btn.classList.add('active'); selected = t;
             };
             pEl.appendChild(btn);
         });
@@ -109,7 +101,7 @@
         function rotatePreview() { globalRot = (globalRot + 90) % 360; }
 
         function saveState() {
-            if (history.length > 30) history.shift();
+            if (history.length > 50) history.shift();
             history.push(cells.map(c => ({ 
                 html: c.innerHTML, className: c.className, rot: c.dataset.rotation || "0", 
                 parentIdx: c.dataset.parentIdx, size: c.dataset.size 
@@ -118,30 +110,47 @@
 
         function undo() {
             if (history.length === 0) return;
-            const last = history.pop();
+            const dList = history.pop();
             cells.forEach((c, i) => {
-                const data = last[i];
-                c.innerHTML = data.html; c.className = data.className; c.dataset.rotation = data.rot;
-                if (data.parentIdx !== undefined) c.dataset.parentIdx = data.parentIdx; else delete c.dataset.parentIdx;
-                if (data.size !== undefined) c.dataset.size = data.size; else delete c.dataset.size;
-                c.style.transform = `rotate(${data.rot}deg)`;
+                const d = dList[i];
+                c.innerHTML = d.html; c.className = d.className; c.dataset.rotation = d.rot;
+                if (d.parentIdx !== undefined) c.dataset.parentIdx = d.parentIdx; else delete c.dataset.parentIdx;
+                if (d.size !== undefined) c.dataset.size = d.size; else delete c.dataset.size;
+                c.style.transform = `rotate(${d.rot}deg)`;
             });
+        }
+
+        function placeTile(idx, tileObj, rot) {
+            let s = tileObj.t.includes("2x2") ? 2 : (tileObj.t.includes("3x3") ? 3 : 1);
+            for(let r=0; r<s; r++) {
+                for(let cl=0; cl<s; cl++) {
+                    const tIdx = idx + (r * gridSize) + cl;
+                    const tCell = cells[tIdx];
+                    tCell.dataset.parentIdx = idx;
+                    if(r === 0 && cl === 0) {
+                        tCell.innerHTML = tileObj.i || "";
+                        tCell.dataset.size = s;
+                        if(tileObj.c) tCell.classList.add(tileObj.c);
+                        if(s === 2) tCell.classList.add('building-host');
+                        if(s === 3) tCell.classList.add('building-host', 'building-host-3x3');
+                        tCell.style.transform = `rotate(${rot}deg)`;
+                        tCell.dataset.rotation = rot;
+                    }
+                }
+            }
         }
 
         function clearTile(idx) {
             const cell = cells[idx];
             if (!cell || cell.dataset.parentIdx === undefined) return;
             const pIdx = parseInt(cell.dataset.parentIdx);
-            const pCell = cells[pIdx];
-            const size = parseInt(pCell.dataset.size) || 1;
+            const size = parseInt(cells[pIdx].dataset.size) || 1;
             for(let r=0; r<size; r++) {
                 for(let cl=0; cl<size; cl++) {
                     const tIdx = pIdx + (r * gridSize) + cl;
-                    if (cells[tIdx]) {
-                        cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
-                        cells[tIdx].style.transform = "rotate(0deg)";
-                        delete cells[tIdx].dataset.rotation; delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size;
-                    }
+                    cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
+                    cells[tIdx].style.transform = "rotate(0deg)";
+                    delete cells[tIdx].dataset.rotation; delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size;
                 }
             }
         }
@@ -150,76 +159,118 @@
             const c = document.createElement('div');
             c.className = 'cell';
             c.dataset.index = i;
-            c.onclick = () => {
+
+            const handleStart = (e) => {
                 const idx = parseInt(c.dataset.index);
-                if (selected.t === "eraser") {
-                    if (c.dataset.parentIdx !== undefined) { saveState(); clearTile(idx); }
-                    return;
-                }
+                if (selected.t === "eraser") { if(c.dataset.parentIdx !== undefined) { saveState(); clearTile(idx); } return; }
+               
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX; startY = touch.clientY;
+                dragStartTime = Date.now();
+
                 if (c.dataset.parentIdx !== undefined) {
                     const pIdx = parseInt(c.dataset.parentIdx);
-                    if (pIdx === idx) {
-                        saveState();
-                        let currentRot = parseInt(c.dataset.rotation) || 0;
-                        let nextRot = (currentRot + 90) % 360;
-                        c.dataset.rotation = nextRot;
-                        c.style.transform = `rotate(${nextRot}deg)`;
-                        return;
-                    }
-                }
-                const row = Math.floor(idx / gridSize);
-                const col = idx % gridSize;
-                let s = selected.t === "2x2" ? 2 : (selected.t === "3x3" ? 3 : 1);
-                if (row <= gridSize - s && col <= gridSize - s) {
-                    let isBlocked = false;
-                    for(let r=0; r<s; r++) {
-                        for(let cl=0; cl<s; cl++) {
-                            if (cells[idx + (r * gridSize) + cl].dataset.parentIdx !== undefined) { isBlocked = true; break; }
-                        }
-                    }
-                    if (!isBlocked) {
-                        saveState();
-                        for(let r=0; r<s; r++) {
-                            for(let cl=0; cl<s; cl++) {
-                                const tIdx = idx + (r * gridSize) + cl;
-                                cells[tIdx].dataset.parentIdx = idx;
-                                if(r === 0 && cl === 0) {
-                                    cells[tIdx].innerText = selected.i;
-                                    cells[tIdx].dataset.size = s;
-                                    if(selected.c) cells[tIdx].classList.add(selected.c);
-                                    if(s === 2) cells[tIdx].classList.add('building-host');
-                                    if(s === 3) cells[tIdx].classList.add('building-host', 'building-host-3x3');
-                                    cells[tIdx].style.transform = `rotate(${globalRot}deg)`;
-                                    cells[tIdx].dataset.rotation = globalRot;
-                                }
-                            }
-                        }
-                    } else {
-                        c.style.backgroundColor = "#ffc9c9";
-                        setTimeout(() => { c.style.backgroundColor = "#fff"; }, 200);
-                    }
+                    const pCell = cells[pIdx];
+                    dragInfo = {
+                        originIdx: pIdx,
+                        size: parseInt(pCell.dataset.size),
+                        html: pCell.innerHTML,
+                        className: pCell.className,
+                        rot: pCell.dataset.rotation
+                    };
+                } else {
+                    dragInfo = null; // 빈 칸 클릭 시 드래그 정보 없음
                 }
             };
-            bEl.appendChild(c);
+
+            const handleEnd = (e) => {
+                const idx = parseInt(c.dataset.index);
+                const duration = Date.now() - dragStartTime;
+
+                if (isDragging) {
+                    proxy.style.display = 'none';
+                    const touch = e.changedTouches ? e.changedTouches[0] : e;
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const targetIdx = target ? parseInt(target.dataset.index) : -1;
+                   
+                    if (targetIdx !== -1) {
+                        const success = attemptPlace(targetIdx, {t: dragInfo.size+"x"+dragInfo.size, i: dragInfo.html, c: dragInfo.className.replace('cell', '').trim()}, dragInfo.rot, true);
+                        if (!success) undo(); 
+                    } else {
+                        undo();
+                    }
+                } else if (duration < 250) {
+                    // 클릭 판정: 회전 혹은 설치
+                    if (c.dataset.parentIdx !== undefined) {
+                        const pIdx = parseInt(c.dataset.parentIdx);
+                        const pCell = cells[pIdx];
+                        saveState();
+                        let nextRot = (parseInt(pCell.dataset.rotation) + 90) % 360;
+                        pCell.dataset.rotation = nextRot; pCell.style.transform = `rotate(${nextRot}deg)`;
+                    } else {
+                        attemptPlace(idx, selected, globalRot);
+                    }
+                }
+                isDragging = false; dragInfo = null;
+            };
+
+            c.addEventListener('mousedown', handleStart);
+            c.addEventListener('touchstart', handleStart);
+            c.addEventListener('mouseup', handleEnd);
+            c.addEventListener('touchend', handleEnd);
             cells.push(c);
+            bEl.appendChild(c);
+        }
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', handleMove, {passive: false});
+
+        function handleMove(e) {
+            if (!dragInfo) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY);
+
+            if (!isDragging && dist > 10 && Date.now() - dragStartTime > 150) {
+                isDragging = true;
+                saveState();
+                clearTile(dragInfo.originIdx);
+                proxy.style.display = 'block';
+                proxy.innerHTML = dragInfo.html;
+                proxy.className = dragInfo.className;
+                proxy.style.width = (dragInfo.size * 30) + "px";
+                proxy.style.height = (dragInfo.size * 30) + "px";
+                proxy.style.transform = `rotate(${dragInfo.rot}deg)`;
+            }
+            if (isDragging) {
+                e.preventDefault();
+                proxy.style.left = (touch.clientX - (dragInfo.size * 15)) + 'px';
+                proxy.style.top = (touch.clientY - (dragInfo.size * 15)) + 'px';
+            }
+        }
+
+        function attemptPlace(idx, tileObj, rot, isMove = false) {
+            const row = Math.floor(idx / gridSize);
+            const col = idx % gridSize;
+            let s = tileObj.t.includes("2x2") ? 2 : (tileObj.t.includes("3x3") ? 3 : 1);
+            if (row > gridSize - s || col > gridSize - s) return false;
+            for(let r=0; r<s; r++) {
+                for(let cl=0; cl<s; cl++) {
+                    if (cells[idx + (r * gridSize) + cl].dataset.parentIdx !== undefined) return false;
+                }
+            }
+            if(!isMove) saveState();
+            placeTile(idx, tileObj, rot);
+            return true;
         }
 
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v19_minimal.png'; a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v21.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
-        function resetBoard() {
-            if(confirm("정말 초기화할까요?")) {
-                saveState();
-                cells.forEach(c => { 
-                    c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; 
-                    delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size;
-                });
-            }
-        }
+        function resetBoard() { if(confirm("초기화할까요?")) { saveState(); cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size; }); } }
     </script>
 </body>
 </html>
