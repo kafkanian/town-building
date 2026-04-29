@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v28</title>
+    <title>My Town Builder v29</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; overflow-x: hidden; }
@@ -11,7 +11,7 @@
         .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 140px; overflow-y: auto; margin-bottom: 5px; }
         .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
-        .tile-preview { width: 18px; height: 18px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .tile-preview { width: 18px; height: 18px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
 
         .board-canvas-area { padding: 50px 50px 200px 50px; }
         .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; position: relative; touch-action: none; }
@@ -41,7 +41,7 @@
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ v28: 타일 이동 오류 해결 버전</h3>
+        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ v29: 조작 감도 최적화 버전</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
@@ -77,7 +77,8 @@
         const proxy = document.getElementById('drag-proxy');
         let isDragging = false, dragInfo = null, startX, startY, dragStartTime = 0;
 
-        // 팔레트 셋업
+        // 팔레트 생성
+        const pEl = document.getElementById('palette');
         tiles.forEach(t => {
             const btn = document.createElement('div');
             btn.className = 'tile-btn';
@@ -89,7 +90,6 @@
                 document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active'); selected = t;
             };
-            pEl = document.getElementById('palette');
             pEl.appendChild(btn);
         });
 
@@ -98,14 +98,13 @@
             document.querySelector('.btn-rotate').innerText = `🔄 배치회전: ${globalRot}°`;
         }
 
-        // --- 배치 로직 ---
         function forcePlace(idx, info) {
             let s = parseInt(info.size);
             for(let r=0; r<s; r++) {
                 for(let cl=0; cl<s; cl++) {
                     const tIdx = idx + (r * gridSize) + cl;
                     if(!cells[tIdx]) continue;
-                    cells[tIdx].dataset.parentIdx = idx; // 모든 점유 칸에 부모 인덱스 기록
+                    cells[tIdx].dataset.parentIdx = idx;
                     if(r === 0 && cl === 0) {
                         cells[tIdx].innerHTML = info.html;
                         cells[tIdx].className = info.className;
@@ -117,24 +116,18 @@
             }
         }
 
-        // --- 데이터 완전 삭제 로직 (수정됨) ---
         function clearTileData(idx) {
             const cell = cells[idx];
             if (!cell || cell.dataset.parentIdx === undefined) return;
             const pIdx = parseInt(cell.dataset.parentIdx);
             const size = parseInt(cells[pIdx].dataset.size) || 1;
-           
             for(let r=0; r<size; r++) {
                 for(let cl=0; cl<size; cl++) {
                     const tIdx = pIdx + (r * gridSize) + cl;
                     if(!cells[tIdx]) continue;
-                    cells[tIdx].innerHTML = ""; 
-                    cells[tIdx].className = 'cell';
+                    cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
                     cells[tIdx].style.transform = "rotate(0deg)";
-                    // dataset 완전 제거 (이 부분이 핵심)
-                    delete cells[tIdx].dataset.parentIdx;
-                    delete cells[tIdx].dataset.size;
-                    delete cells[tIdx].dataset.rotation;
+                    delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size; delete cells[tIdx].dataset.rotation;
                 }
             }
         }
@@ -147,7 +140,7 @@
             const handleStart = (e) => {
                 const touch = e.touches ? e.touches[0] : e;
                 startX = touch.clientX; startY = touch.clientY;
-                dragStartTime = Date.now();
+                dragStartTime = Date.now(); // 터치 시작 시간 기록
                 const idx = parseInt(c.dataset.index);
 
                 if (selected.t === "eraser") { 
@@ -158,31 +151,27 @@
                 if (c.dataset.parentIdx !== undefined) {
                     const pIdx = parseInt(c.dataset.parentIdx);
                     const pCell = cells[pIdx];
-                    dragInfo = {
-                        originIdx: pIdx,
-                        size: pCell.dataset.size,
-                        html: pCell.innerHTML,
-                        className: pCell.className,
-                        rot: pCell.dataset.rotation
-                    };
+                    dragInfo = { originIdx: pIdx, size: pCell.dataset.size, html: pCell.innerHTML, className: pCell.className, rot: pCell.dataset.rotation };
                 }
             };
 
             const handleEnd = (e) => {
                 const idx = parseInt(c.dataset.index);
+                const duration = Date.now() - dragStartTime; // 터치 유지 시간 계산
+
                 if (isDragging && dragInfo) {
                     proxy.style.display = 'none';
                     const touch = e.changedTouches ? e.changedTouches[0] : e;
                     const target = document.elementFromPoint(touch.clientX, touch.clientY);
                     const tIdx = target ? parseInt(target.dataset.index) : -1;
-                   
-                    // 새 위치에 배치가 가능하면 배치, 아니면 원위치
                     if (tIdx !== -1 && canPlace(tIdx, dragInfo.size, dragInfo.className.includes('bridge-tile'))) {
                         forcePlace(tIdx, dragInfo); 
                     } else {
                         forcePlace(dragInfo.originIdx, dragInfo);
                     }
-                } else if (Date.now() - dragStartTime < 250) { // 탭/클릭 시
+                } 
+                // 회전 조건 강화: 이동하지 않았고(isDragging=false), 시간이 아주 짧을(150ms 미만) 때만 실행
+                else if (!isDragging && duration < 150) {
                     if (c.dataset.parentIdx !== undefined) {
                         const pIdx = parseInt(c.dataset.parentIdx);
                         let nextRot = (parseInt(cells[pIdx].dataset.rotation) + 90) % 360;
@@ -191,12 +180,7 @@
                     } else if (selected.t !== "eraser") {
                         let s = selected.t.includes("3x3")?3:selected.t.includes("2x2")?2:1;
                         if(canPlace(idx, s, selected.c === 'bridge-tile')) {
-                            const info = {
-                                html: selected.i || "",
-                                className: 'cell ' + (selected.c || ''),
-                                size: s,
-                                rot: globalRot
-                            };
+                            const info = { html: selected.i || "", className: 'cell ' + (selected.c || ''), size: s, rot: globalRot };
                             if(s >= 2) info.className += (s === 3 ? ' building-host building-host-3x3' : ' building-host');
                             forcePlace(idx, info);
                         }
@@ -221,9 +205,10 @@
             const touch = e.touches ? e.touches[0] : e;
             const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY);
 
-            if (!isDragging && dist > 10) {
+            // 이동 거리가 5px를 넘으면 즉시 드래그 모드로 확정 (회전 방지)
+            if (!isDragging && dist > 5) {
                 isDragging = true;
-                clearTileData(dragInfo.originIdx); // 드래그 시작 시점 즉시 칸 비우기
+                clearTileData(dragInfo.originIdx);
                 proxy.style.display = 'block';
                 proxy.innerHTML = dragInfo.html;
                 proxy.className = dragInfo.className;
@@ -241,13 +226,11 @@
         function canPlace(idx, size, isBridgeTarget = false) {
             const s = parseInt(size), row = Math.floor(idx / gridSize), col = idx % gridSize;
             if (row > gridSize - s || col > gridSize - s) return false;
-           
             for(let r=0; r<s; r++) {
                 for(let cl=0; cl<s; cl++) {
-                    const targetCell = cells[idx + (r * gridSize) + cl];
-                    // dataset.parentIdx가 존재한다는 것은 이미 데이터가 차 있다는 뜻
-                    if (targetCell.dataset.parentIdx !== undefined) {
-                        if (isBridgeTarget && targetCell.classList.contains('river-tile')) continue;
+                    const target = cells[idx + (r * gridSize) + cl];
+                    if (target.dataset.parentIdx !== undefined) {
+                        if (isBridgeTarget && target.classList.contains('river-tile')) continue;
                         return false;
                     }
                 }
@@ -258,7 +241,7 @@
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v28.png'; a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v29.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
