@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v40</title>
+    <title>My Town Builder v42</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
         
-        /* 상단 팔레트 */
         .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .palette { 
             display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 6px; 
@@ -19,24 +18,19 @@
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
         .tile-preview { width: 28px; height: 28px; margin-bottom: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 0.5px solid #ddd; position: relative; overflow: hidden; font-size: 18px; }
 
-        /* 보드 스크롤 컨테이너: 하단 버튼 여백 추가 */
         .scroll-container { 
             width: 100vw; height: calc(100vh - 200px); 
             overflow: auto; display: block; 
-            padding: 40px 40px 250px 40px; /* 아래쪽 여백을 250px 주어 버튼에 안 가려지게 함 */
+            padding: 40px 40px 250px 40px; 
             box-sizing: border-box; 
         }
         .board { 
-            display: grid; 
-            grid-template-columns: repeat(25, 30px); /* 25칸 */
-            grid-template-rows: repeat(25, 30px);    /* 25칸 */
+            display: grid; grid-template-columns: repeat(25, 30px); grid-template-rows: repeat(25, 30px); 
             background-color: #dee2e6; border: 8px solid #adb5bd; 
-            width: 750px; height: 750px; /* 30px * 25 = 750px */
-            margin: 0 auto; position: relative; touch-action: none;
+            width: 750px; height: 750px; margin: 0 auto; position: relative; touch-action: none;
         }
         .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; border: 0.1px solid #eee; box-sizing: border-box; position: relative; }
         
-        /* 디자인 정의 */
         .grass-tile { background-color: #3cb371 !important; }
         .river-tile { background-color: #339af0 !important; }
         .unpaved-tile { background-color: #cd853f !important; }
@@ -52,7 +46,6 @@
 
         #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; border: 2px solid #4dabf7; background: white; }
 
-        /* 하단 푸터 */
         .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; display: flex; gap: 10px; z-index: 2000; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
         button { flex: 1; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 12px; border: none; color: white; cursor: pointer; }
         .btn-save { background: #40c057; }
@@ -78,15 +71,15 @@
             {n:"도로(─)", i:"", c:"rd-h", t:"1x1"}, {n:"도로(│)", i:"", c:"rd-v", t:"1x1"},
             {n:"철로(─)", i:"", c:"rl-h", t:"1x1"}, {n:"철로(│)", i:"", c:"rl-v", t:"1x1"},
             {n:"다리(─)", i:"", c:"br-h", t:"1x1"}, {n:"다리(│)", i:"", c:"br-v", t:"1x1"},
-            {n:"카페", i:"☕", t:"2x2"}, {n:"수영장", i:"🏊", t:"2x2"}, {n:"도서관", i:"📚", t:"2x2"},
+            {n:"카페", i:"☕", t:"2x2"}, {n:"미술관", i:"🎨", t:"2x2"}, {n:"공연장", i:"🎭", t:"2x2"},
+            {n:"도서관", i:"📚", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"}, {n:"수영장", i:"🏊", t:"2x2"},
             {n:"체육관", i:"🏋️", t:"2x2"}, {n:"스타디움", i:"🏟️", t:"3x3"}, {n:"공원", i:"⛲", t:"2x2"},
             {n:"학교", i:"🏫", t:"2x2"}, {n:"병원", i:"🏥", t:"2x2"}, {n:"약국", i:"💊", t:"2x2"},
             {n:"경찰서", i:"🚔", t:"2x2"}, {n:"소방서", i:"🚒", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"},
             {n:"마트", i:"🏬", t:"2x2"}, {n:"센터", i:"🏛️", t:"2x2"}, {n:"주유소", i:"⛽", t:"2x2"},
             {n:"주택", i:"🏡", t:"2x2"}, {n:"빌딩", i:"🏢", t:"2x2"}, {n:"산", i:"⛰️", t:"3x3"},
             {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, {n:"지하철", i:"🚉", t:"2x2"},
-            {n:"버스", i:"🚏", t:"1x1"}, {n:"주차장", i:"🅿️", t:"1x1"}, {n:"신호등", i:"🚦", t:"1x1"},
-            {n:"분수", i:"⛲", t:"1x1"}, {n:"벤치", i:"🪑", t:"1x1"}, {n:"지우개", i:"🧹", t:"eraser"}
+            {n:"버스", i:"🚏", t:"1x1"}, {n:"주차장", i:"🅿️", t:"1x1"}, {n:"지우개", i:"🧹", t:"eraser"}
         ];
 
         let selected = tiles[0], gridSize = 25, cells = [];
@@ -140,7 +133,6 @@
             const c = document.createElement('div');
             c.className = 'cell';
             c.dataset.index = i;
-
             const handleStart = (e) => {
                 const touch = e.touches ? e.touches[0] : e;
                 startX = touch.clientX; startY = touch.clientY;
@@ -208,7 +200,7 @@
             const target = document.getElementById('board');
             html2canvas(target, { scale: 2, useCORS: true, backgroundColor: "#dee2e6", scrollX: 0, scrollY: 0, width: 750, height: 750 }).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'my_town_v40.png'; a.href = canvas.toDataURL("image/png"); a.click();
+                a.download = 'my_town_v42.png'; a.href = canvas.toDataURL("image/png"); a.click();
             });
         }
         function resetBoard() { if(confirm("전부 지울까요?")) { cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; delete c.dataset.parentIdx; delete c.dataset.size; }); } }
