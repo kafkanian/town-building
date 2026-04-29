@@ -3,63 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v35</title>
+    <title>My Town Builder v36</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        :root { --cell-size: clamp(10px, 3.1vw, 30px); } /* 화면 폭에 맞춰 타일 크기 자동 조절 */
+        :root { --cell-size: clamp(12px, 3.2vw, 30px); }
 
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; overflow-x: hidden; }
        
-        .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
-        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 4px; width: 95vw; max-width: 1100px; max-height: 160px; overflow-y: auto; padding: 8px; border-radius: 10px; background: #f8f9fa; }
-        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 8px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
-        .tile-preview { width: 20px; height: 20px; margin-bottom: 2px; border-radius: 3px; display: flex; align-items: center; justify-content: center; border: 0.5px solid #ddd; overflow: hidden; }
-
-        /* 보드 컨테이너: 화면 중앙 정렬 및 잘림 방지 */
-        .board-canvas-area { 
-            display: flex; justify-content: center; align-items: center; 
-            width: 100vw; padding: 20px 0 200px 0; background-color: #f0f2f5; 
+        /* 팔레트 상단 고정 및 가로 스크롤 강화 */
+        .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 12px 0; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+       
+        .palette { 
+            display: flex; /* 그리드 대신 플렉스 사용 */
+            overflow-x: auto; /* 가로 스크롤 활성화 */
+            white-space: nowrap; 
+            -webkit-overflow-scrolling: touch; /* 부드러운 스크롤 */
+            width: 100vw;
+            padding: 5px 15px;
+            gap: 10px;
+            scrollbar-width: none; /* 파이어폭스 스크롤바 숨김 */
         }
+        .palette::-webkit-scrollbar { display: none; } /* 크롬 스크롤바 숨김 */
+
+        .tile-btn { 
+            flex: 0 0 auto; /* 크기 고정 */
+            width: 75px; height: 75px; 
+            border: 2px solid #eee; border-radius: 12px; 
+            background: #fff; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; transform: scale(1.05); box-shadow: 0 4px 10px rgba(77, 171, 247, 0.2); }
+        .tile-preview { width: 30px; height: 30px; margin-bottom: 5px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid #ddd; overflow: hidden; font-size: 20px; }
+        .tile-name { font-size: 11px; color: #444; font-weight: 500; }
+
+        /* 보드 영역 */
+        .board-canvas-area { display: flex; justify-content: center; width: 100vw; padding: 30px 0 220px 0; }
         .board { 
             display: grid; 
             grid-template-columns: repeat(30, var(--cell-size)); 
             grid-template-rows: repeat(30, var(--cell-size)); 
-            background-color: #dee2e6; border: 4px solid #adb5bd; 
+            background-color: #dee2e6; border: 5px solid #adb5bd; 
             position: relative; touch-action: none; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
         .cell { 
             width: var(--cell-size); height: var(--cell-size); 
             background-color: #ffffff; display: flex; align-items: center; justify-content: center; 
-            font-size: calc(var(--cell-size) * 0.7); border: 0.1px solid #eee; box-sizing: border-box; cursor: pointer; position: relative; 
+            border: 0.1px solid #eee; box-sizing: border-box; position: relative; 
         }
-       
-        /* 타일 디자인 (v34 유지) */
+
+        /* 타일 그래픽 (v35 유지) */
         .grass-tile { background-color: #3cb371 !important; }
         .river-tile { background-color: #339af0 !important; }
-        .unpaved-tile { background-color: #cd853f !important; }
-        .rd-h { background: #333 !important; } .rd-h::after { content:''; position:absolute; width:100%; height:2px; background:#FFD700; top:45%; }
-        .rd-v { background: #333 !important; } .rd-v::after { content:''; position:absolute; width:2px; height:100%; background:#FFD700; left:45%; }
+        .rd-h { background: #333 !important; } .rd-h::after { content:''; position:absolute; width:100%; height:2px; background:#FFD700; top:47%; }
+        .rd-v { background: #333 !important; } .rd-v::after { content:''; position:absolute; width:2px; height:100%; background:#FFD700; left:47%; }
         .rl-h { background: #777 !important; } .rl-h::before { content:''; position:absolute; width:100%; height:30%; border-top:1.5px solid #444; border-bottom:1.5px solid #444; top:35%; }
         .rl-v { background: #777 !important; } .rl-v::before { content:''; position:absolute; width:30%; height:100%; border-left:1.5px solid #444; border-right:1.5px solid #444; left:35%; }
 
-        /* 다중 칸 건물용 폰트 크기 조정 */
         .building-host { z-index: 10 !important; pointer-events: none; width: calc(var(--cell-size)*2) !important; height: calc(var(--cell-size)*2) !important; font-size: calc(var(--cell-size)*1.5) !important; }
         .building-host-3x3 { width: calc(var(--cell-size)*3) !important; height: calc(var(--cell-size)*3) !important; font-size: calc(var(--cell-size)*2.5) !important; }
 
-        #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; border: 2px solid #4dabf7; background: white; }
+        #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; border: 2px solid #4dabf7; background: white; border-radius: 8px; }
 
-        .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: flex; gap: 10px; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        button { flex: 1; padding: 15px; font-size: 14px; font-weight: bold; border-radius: 10px; border: none; color: white; cursor: pointer; }
+        .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 20px; display: flex; gap: 12px; z-index: 2000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        button { flex: 1; padding: 18px; font-size: 16px; font-weight: bold; border-radius: 12px; border: none; color: white; cursor: pointer; }
         .btn-save { background: #40c057; }
         .btn-reset { background: #fa5252; }
     </style>
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ v35: 태블릿 화면 맞춤 & 잘림 방지</h3>
         <div class="palette" id="palette"></div>
+        <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">← 좌우로 밀어서 타일을 선택하세요 →</p>
     </div>
     <div class="board-canvas-area">
         <div class="board" id="board"></div>
@@ -72,13 +87,13 @@
 
     <script>
         const tiles = [
-            {n:"잔디", i:"", c:"grass-tile", t:"1x1"}, {n:"강", i:"", c:"river-tile", t:"1x1"}, {n:"흙바닥", i:"", c:"unpaved-tile", t:"1x1"},
+            {n:"잔디", i:"", c:"grass-tile", t:"1x1"}, {n:"강", i:"", c:"river-tile", t:"1x1"},
             {n:"도로(─)", i:"", c:"rd-h", t:"1x1"}, {n:"도로(│)", i:"", c:"rd-v", t:"1x1"},
             {n:"철로(─)", i:"", c:"rl-h", t:"1x1"}, {n:"철로(│)", i:"", c:"rl-v", t:"1x1"},
             {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, {n:"산", i:"⛰️", t:"3x3"},
             {n:"주택", i:"🏡", t:"2x2"}, {n:"빌딩", i:"🏢", t:"2x2"}, {n:"공원", i:"⛲", t:"2x2"},
             {n:"학교", i:"🏫", t:"2x2"}, {n:"병원", i:"🏥", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"},
-            {n:"지하철", i:"🚉", t:"2x2"}, {n:"버스", i:"🚏", t:"2x2"}, {n:"지우개", i:"", t:"eraser"}
+            {n:"지하철", i:"🚉", t:"2x2"}, {n:"버스", i:"🚏", t:"2x2"}, {n:"지우개", i:"🧹", t:"eraser"}
         ];
 
         let selected = tiles[0], gridSize = 30, cells = [];
@@ -92,7 +107,7 @@
             btn.className = 'tile-btn';
             if(t === selected) btn.classList.add('active');
             let pre = t.i ? `<div class="tile-preview">${t.i}</div>` : `<div class="tile-preview ${t.c || ''}"></div>`;
-            btn.innerHTML = `${pre}${t.n}`;
+            btn.innerHTML = `${pre}<span class="tile-name">${t.n}</span>`;
             btn.onclick = () => { document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selected = t; };
             pEl.appendChild(btn);
         });
@@ -179,18 +194,18 @@
             if (!dragInfo) return;
             const touch = e.touches ? e.touches[0] : e;
             const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY);
-            if (!isDragging && dist > 15) {
+            if (!isDragging && dist > 20) {
                 isDragging = true;
                 proxy.style.display = 'block';
                 proxy.innerHTML = dragInfo.html;
                 proxy.className = dragInfo.className;
-                const cs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+                const cs = cells[0].offsetWidth;
                 proxy.style.width = (dragInfo.size * cs) + 'px';
                 proxy.style.height = (dragInfo.size * cs) + 'px';
             }
             if (isDragging) {
                 if (e.cancelable) e.preventDefault();
-                const cs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+                const cs = cells[0].offsetWidth;
                 proxy.style.left = (touch.clientX - (dragInfo.size * cs / 2)) + 'px';
                 proxy.style.top = (touch.clientY - (dragInfo.size * cs / 2)) + 'px';
             }
@@ -213,14 +228,9 @@
 
         function saveImage() {
             const target = document.getElementById('board');
-            // 저장 시 일시적으로 스케일을 고정하여 고화질 캡처
-            html2canvas(target, {
-                scale: 3,
-                useCORS: true,
-                backgroundColor: "#dee2e6",
-            }).then(canvas => {
+            html2canvas(target, { scale: 3, useCORS: true, backgroundColor: "#dee2e6" }).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'my_town_v35.png';
+                a.download = 'my_town_v36.png';
                 a.href = canvas.toDataURL("image/png");
                 a.click();
             });
