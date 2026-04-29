@@ -3,96 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v33</title>
+    <title>My Town Builder v35</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; overflow-x: hidden; }
-        .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
-        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; width: 95vw; max-width: 1100px; max-height: 200px; overflow-y: auto; margin-bottom: 5px; padding: 8px; border-radius: 10px; background: #f8f9fa; }
-        .tile-btn { padding: 8px 2px; border: 1.5px solid #eee; border-radius: 8px; cursor: pointer; text-align: center; font-size: 11px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; transform: scale(1.02); }
-        .tile-preview { width: 26px; height: 26px; margin-bottom: 3px; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 0.5px solid #ddd; position: relative; }
+        :root { --cell-size: clamp(10px, 3.1vw, 30px); } /* 화면 폭에 맞춰 타일 크기 자동 조절 */
 
-        .board-canvas-area { padding: 40px 40px 220px 40px; }
-        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 6px solid #adb5bd; width: 900px; height: 900px; position: relative; touch-action: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 0.1px solid #f2f2f2; box-sizing: border-box; cursor: pointer; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; overflow-x: hidden; }
        
-        /* --- 타일 디자인 세트 --- */
+        .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
+        .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 4px; width: 95vw; max-width: 1100px; max-height: 160px; overflow-y: auto; padding: 8px; border-radius: 10px; background: #f8f9fa; }
+        .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 8px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
+        .tile-preview { width: 20px; height: 20px; margin-bottom: 2px; border-radius: 3px; display: flex; align-items: center; justify-content: center; border: 0.5px solid #ddd; overflow: hidden; }
+
+        /* 보드 컨테이너: 화면 중앙 정렬 및 잘림 방지 */
+        .board-canvas-area { 
+            display: flex; justify-content: center; align-items: center; 
+            width: 100vw; padding: 20px 0 200px 0; background-color: #f0f2f5; 
+        }
+        .board { 
+            display: grid; 
+            grid-template-columns: repeat(30, var(--cell-size)); 
+            grid-template-rows: repeat(30, var(--cell-size)); 
+            background-color: #dee2e6; border: 4px solid #adb5bd; 
+            position: relative; touch-action: none; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .cell { 
+            width: var(--cell-size); height: var(--cell-size); 
+            background-color: #ffffff; display: flex; align-items: center; justify-content: center; 
+            font-size: calc(var(--cell-size) * 0.7); border: 0.1px solid #eee; box-sizing: border-box; cursor: pointer; position: relative; 
+        }
+       
+        /* 타일 디자인 (v34 유지) */
         .grass-tile { background-color: #3cb371 !important; }
         .river-tile { background-color: #339af0 !important; }
         .unpaved-tile { background-color: #cd853f !important; }
+        .rd-h { background: #333 !important; } .rd-h::after { content:''; position:absolute; width:100%; height:2px; background:#FFD700; top:45%; }
+        .rd-v { background: #333 !important; } .rd-v::after { content:''; position:absolute; width:2px; height:100%; background:#FFD700; left:45%; }
+        .rl-h { background: #777 !important; } .rl-h::before { content:''; position:absolute; width:100%; height:30%; border-top:1.5px solid #444; border-bottom:1.5px solid #444; top:35%; }
+        .rl-v { background: #777 !important; } .rl-v::before { content:''; position:absolute; width:30%; height:100%; border-left:1.5px solid #444; border-right:1.5px solid #444; left:35%; }
 
-        /* 도로 디자인 */
-        .rd-h { background: #333 linear-gradient(90deg, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
-        .rd-v { background: #333 linear-gradient(0deg, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
-        .rd-c1 { background: #333 radial-gradient(circle at 100% 100%, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
-        .rd-c2 { background: #333 radial-gradient(circle at 0% 100%, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
-        .rd-c3 { background: #333 radial-gradient(circle at 100% 0%, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
-        .rd-c4 { background: #333 radial-gradient(circle at 0% 0%, transparent 40%, #FFD700 40%, #FFD700 60%, transparent 60%) !important; }
+        /* 다중 칸 건물용 폰트 크기 조정 */
+        .building-host { z-index: 10 !important; pointer-events: none; width: calc(var(--cell-size)*2) !important; height: calc(var(--cell-size)*2) !important; font-size: calc(var(--cell-size)*1.5) !important; }
+        .building-host-3x3 { width: calc(var(--cell-size)*3) !important; height: calc(var(--cell-size)*3) !important; font-size: calc(var(--cell-size)*2.5) !important; }
 
-        /* 기차 철로 디자인 */
-        .rl-h { background: #aaa linear-gradient(0deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(90deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
-        .rl-v { background: #aaa linear-gradient(90deg, #444 10%, transparent 10%, transparent 45%, #444 45%, #444 55%, transparent 55%, transparent 90%, #444 90%), linear-gradient(0deg, transparent 35%, #666 35%, #666 40%, transparent 40%, transparent 60%, #666 60%, #666 65%, transparent 65%) !important; }
-        .rl-c1 { background: #aaa radial-gradient(circle at 100% 100%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
-        .rl-c2 { background: #aaa radial-gradient(circle at 0% 100%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
-        .rl-c3 { background: #aaa radial-gradient(circle at 100% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
-        .rl-c4 { background: #aaa radial-gradient(circle at 0% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
-
-        /* 다리 */
-        .br-h { background: #999 linear-gradient(0deg, #555 2px, transparent 2px, transparent 28px, #555 28px) !important; }
-        .br-v { background: #999 linear-gradient(90deg, #555 2px, transparent 2px, transparent 28px, #555 28px) !important; }
-
-        .building-host { font-size: 50px !important; z-index: 10 !important; pointer-events: none; width: 60px !important; height: 60px !important; }
-        .building-host-3x3 { font-size: 80px !important; width: 90px !important; height: 90px !important; }
-
-        #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; border: 2px solid #4dabf7; background: white; border-radius: 4px; }
+        #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.7; display: none; border: 2px solid #4dabf7; background: white; }
 
         .footer-ui { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; display: flex; gap: 10px; z-index: 2000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-        button { flex: 1; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; border: none; color: white; cursor: pointer; }
+        button { flex: 1; padding: 15px; font-size: 14px; font-weight: bold; border-radius: 10px; border: none; color: white; cursor: pointer; }
         .btn-save { background: #40c057; }
         .btn-reset { background: #fa5252; }
     </style>
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 15px;">🏙️ v33: 모든 타일 복구 & 방향 개별 선택 버전</h3>
+        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ v35: 태블릿 화면 맞춤 & 잘림 방지</h3>
         <div class="palette" id="palette"></div>
     </div>
-    <div class="board-canvas-area" id="capture-area">
+    <div class="board-canvas-area">
         <div class="board" id="board"></div>
     </div>
     <div id="drag-proxy"></div>
     <div class="footer-ui">
         <button class="btn-save" onclick="saveImage()">🖼️ 이미지 저장</button>
-        <button class="btn-reset" onclick="resetBoard()">🗑️ 전체 초기화</button>
+        <button class="btn-reset" onclick="resetBoard()">🗑️ 초기화</button>
     </div>
 
     <script>
         const tiles = [
-            /* 기본 지형 */
             {n:"잔디", i:"", c:"grass-tile", t:"1x1"}, {n:"강", i:"", c:"river-tile", t:"1x1"}, {n:"흙바닥", i:"", c:"unpaved-tile", t:"1x1"},
-            /* 도로 시리즈 */
             {n:"도로(─)", i:"", c:"rd-h", t:"1x1"}, {n:"도로(│)", i:"", c:"rd-v", t:"1x1"},
-            {n:"도로(┌)", i:"", c:"rd-c1", t:"1x1"}, {n:"도로(┐)", i:"", c:"rd-c2", t:"1x1"},
-            {n:"도로(└)", i:"", c:"rd-c3", t:"1x1"}, {n:"도로(┘)", i:"", c:"rd-c4", t:"1x1"},
-            /* 철로 시리즈 */
             {n:"철로(─)", i:"", c:"rl-h", t:"1x1"}, {n:"철로(│)", i:"", c:"rl-v", t:"1x1"},
-            {n:"철로(┌)", i:"", c:"rl-c1", t:"1x1"}, {n:"철로(┐)", i:"", c:"rl-c2", t:"1x1"},
-            {n:"철로(└)", i:"", c:"rl-c3", t:"1x1"}, {n:"철로(┘)", i:"", c:"rl-c4", t:"1x1"},
-            /* 다리 */
-            {n:"다리(─)", i:"", c:"br-h", t:"1x1"}, {n:"다리(│)", i:"", c:"br-v", t:"1x1"},
-            /* 자연 및 시설 */
             {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, {n:"산", i:"⛰️", t:"3x3"},
-            {n:"공원", i:"⛲", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"}, {n:"체육관", i:"🏋️", t:"2x2"},
-            /* 건물 시리즈 */
-            {n:"주택", i:"🏡", t:"2x2"}, {n:"빌딩", i:"🏢", t:"2x2"}, {n:"학교", i:"🏫", t:"2x2"},
-            {n:"약국", i:"💊", t:"2x2"}, {n:"병원", i:"🏥", t:"2x2"}, {n:"경찰서", i:"🚔", t:"2x2"},
-            {n:"소방서", i:"🚒", t:"2x2"}, {n:"센터", i:"🏛️", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"},
-            {n:"카페", i:"☕", t:"2x2"}, {n:"마트", i:"🏬", t:"2x2"}, {n:"주유소", i:"⛽", t:"2x2"},
-            {n:"지하철", i:"🚉", t:"2x2"}, {n:"버스", i:"🚏", t:"2x2"}, {n:"경기장", i:"🏟️", t:"2x2"},
-            {n:"수영장", i:"🏊", t:"2x2"}, {n:"도서관", i:"📖", t:"2x2"}, 
-            /* 기타 */
-            {n:"지우개", i:"", t:"eraser"}
+            {n:"주택", i:"🏡", t:"2x2"}, {n:"빌딩", i:"🏢", t:"2x2"}, {n:"공원", i:"⛲", t:"2x2"},
+            {n:"학교", i:"🏫", t:"2x2"}, {n:"병원", i:"🏥", t:"2x2"}, {n:"편의점", i:"🏪", t:"2x2"},
+            {n:"지하철", i:"🚉", t:"2x2"}, {n:"버스", i:"🚏", t:"2x2"}, {n:"지우개", i:"", t:"eraser"}
         ];
 
         let selected = tiles[0], gridSize = 30, cells = [];
@@ -106,11 +92,54 @@
             btn.className = 'tile-btn';
             if(t === selected) btn.classList.add('active');
             let pre = t.i ? `<div class="tile-preview">${t.i}</div>` : `<div class="tile-preview ${t.c || ''}"></div>`;
-            if(t.t === "eraser") pre = `<div class="tile-preview">🧹</div>`;
             btn.innerHTML = `${pre}${t.n}`;
             btn.onclick = () => { document.querySelectorAll('.tile-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selected = t; };
             pEl.appendChild(btn);
         });
+
+        for(let i=0; i < gridSize * gridSize; i++) {
+            const c = document.createElement('div');
+            c.className = 'cell';
+            c.dataset.index = i;
+
+            const handleStart = (e) => {
+                const touch = e.touches ? e.touches[0] : e;
+                startX = touch.clientX; startY = touch.clientY;
+                const idx = parseInt(c.dataset.index);
+
+                if (selected.t === "eraser") { if(c.dataset.parentIdx !== undefined) clearTileData(idx); return; }
+                if (c.dataset.parentIdx !== undefined) {
+                    const pIdx = parseInt(c.dataset.parentIdx);
+                    const pCell = cells[pIdx];
+                    dragInfo = { originIdx: pIdx, size: pCell.dataset.size, html: pCell.innerHTML, className: pCell.className.replace('cell ', '') };
+                } else {
+                    let s = selected.t.includes("3x3")?3:selected.t.includes("2x2")?2:1;
+                    if(canPlace(idx, s)) {
+                        forcePlace(idx, { html: selected.i || "", className: (selected.c || '') + (s===2?' building-host':s===3?' building-host building-host-3x3':''), size: s });
+                    }
+                }
+            };
+
+            const handleEnd = (e) => {
+                if (isDragging && dragInfo) {
+                    proxy.style.display = 'none';
+                    const touch = e.changedTouches ? e.changedTouches[0] : e;
+                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const tIdx = target ? parseInt(target.dataset.index) : -1;
+                    if (tIdx !== -1 && canPlace(tIdx, dragInfo.size)) {
+                        clearTileData(dragInfo.originIdx);
+                        forcePlace(tIdx, dragInfo);
+                    }
+                }
+                isDragging = false; dragInfo = null;
+            };
+
+            c.addEventListener('mousedown', handleStart);
+            c.addEventListener('touchstart', handleStart);
+            c.addEventListener('mouseup', handleEnd);
+            c.addEventListener('touchend', handleEnd);
+            cells.push(c); bEl.appendChild(c);
+        }
 
         function forcePlace(idx, info) {
             let s = parseInt(info.size);
@@ -143,53 +172,6 @@
             }
         }
 
-        for(let i=0; i < gridSize * gridSize; i++) {
-            const c = document.createElement('div');
-            c.className = 'cell';
-            c.dataset.index = i;
-
-            const handleStart = (e) => {
-                const touch = e.touches ? e.touches[0] : e;
-                startX = touch.clientX; startY = touch.clientY;
-                const idx = parseInt(c.dataset.index);
-
-                if (selected.t === "eraser") { if(c.dataset.parentIdx !== undefined) clearTileData(idx); return; }
-                if (c.dataset.parentIdx !== undefined) {
-                    const pIdx = parseInt(c.dataset.parentIdx);
-                    const pCell = cells[pIdx];
-                    dragInfo = { originIdx: pIdx, size: pCell.dataset.size, html: pCell.innerHTML, className: pCell.className.replace('cell ', '') };
-                } else {
-                    let s = selected.t.includes("3x3")?3:selected.t.includes("2x2")?2:1;
-                    if(canPlace(idx, s)) {
-                        const info = { html: selected.i || "", className: selected.c || "", size: s };
-                        if(s >= 2) info.className += (s === 3 ? ' building-host building-host-3x3' : ' building-host');
-                        forcePlace(idx, info);
-                    }
-                }
-            };
-
-            const handleEnd = (e) => {
-                if (isDragging && dragInfo) {
-                    proxy.style.display = 'none';
-                    const touch = e.changedTouches ? e.changedTouches[0] : e;
-                    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const tIdx = target ? parseInt(target.dataset.index) : -1;
-                    if (tIdx !== -1 && canPlace(tIdx, dragInfo.size)) {
-                        clearTileData(dragInfo.originIdx);
-                        forcePlace(tIdx, dragInfo);
-                    }
-                }
-                isDragging = false; dragInfo = null;
-            };
-
-            c.addEventListener('mousedown', handleStart);
-            c.addEventListener('touchstart', handleStart);
-            c.addEventListener('mouseup', handleEnd);
-            c.addEventListener('touchend', handleEnd);
-            cells.push(c);
-            bEl.appendChild(c);
-        }
-
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('touchmove', handleMove, { passive: false });
 
@@ -202,13 +184,15 @@
                 proxy.style.display = 'block';
                 proxy.innerHTML = dragInfo.html;
                 proxy.className = dragInfo.className;
-                proxy.style.width = (dragInfo.size * 30) + 'px';
-                proxy.style.height = (dragInfo.size * 30) + 'px';
+                const cs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+                proxy.style.width = (dragInfo.size * cs) + 'px';
+                proxy.style.height = (dragInfo.size * cs) + 'px';
             }
             if (isDragging) {
                 if (e.cancelable) e.preventDefault();
-                proxy.style.left = (touch.clientX - (dragInfo.size * 15)) + 'px';
-                proxy.style.top = (touch.clientY - (dragInfo.size * 15)) + 'px';
+                const cs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+                proxy.style.left = (touch.clientX - (dragInfo.size * cs / 2)) + 'px';
+                proxy.style.top = (touch.clientY - (dragInfo.size * cs / 2)) + 'px';
             }
         }
 
@@ -217,9 +201,9 @@
             if (row > gridSize - s || col > gridSize - s) return false;
             for(let r=0; r<s; r++) {
                 for(let cl=0; cl<s; cl++) {
-                    const target = cells[idx + (r * gridSize) + cl];
-                    if (target.dataset.parentIdx !== undefined) {
-                        if (dragInfo && parseInt(target.dataset.parentIdx) === dragInfo.originIdx) continue;
+                    const t = cells[idx + (r * gridSize) + cl];
+                    if (t.dataset.parentIdx !== undefined) {
+                        if (dragInfo && parseInt(t.dataset.parentIdx) === dragInfo.originIdx) continue;
                         return false;
                     }
                 }
@@ -227,8 +211,22 @@
             return true;
         }
 
-        function saveImage() { html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => { const a = document.createElement('a'); a.download = 'town_v33.png'; a.href = canvas.toDataURL(); a.click(); }); }
-        function resetBoard() { if(confirm("전부 지울까요?")) { cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; delete c.dataset.parentIdx; delete c.dataset.size; }); } }
+        function saveImage() {
+            const target = document.getElementById('board');
+            // 저장 시 일시적으로 스케일을 고정하여 고화질 캡처
+            html2canvas(target, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: "#dee2e6",
+            }).then(canvas => {
+                const a = document.createElement('a');
+                a.download = 'my_town_v35.png';
+                a.href = canvas.toDataURL("image/png");
+                a.click();
+            });
+        }
+
+        function resetBoard() { if(confirm("초기화할까요?")) { cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; delete c.dataset.parentIdx; delete c.dataset.size; }); } }
     </script>
 </body>
 </html>
