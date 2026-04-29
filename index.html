@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v24</title>
+    <title>My Town Builder v26</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: none; overflow-x: hidden; }
+        body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; overflow-x: hidden; }
         .header-ui { position: sticky; top: 0; width: 100%; background: white; z-index: 1000; padding: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
         .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 5px; width: 95vw; max-width: 900px; max-height: 140px; overflow-y: auto; margin-bottom: 5px; }
         .tile-btn { padding: 6px 2px; border: 1.5px solid #eee; border-radius: 6px; cursor: pointer; text-align: center; font-size: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; }
         .tile-btn.active { border-color: #4dabf7; background: #e7f5ff; font-weight: bold; }
         .tile-preview { width: 16px; height: 16px; margin-bottom: 2px; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
 
-        .board-canvas-area { padding: 40px 40px 150px 40px; }
-        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; position: relative; }
-        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 0.1px solid #f0f0f0; box-sizing: border-box; cursor: pointer; user-select: none; }
+        .board-canvas-area { padding: 50px 50px 200px 50px; background-color: #f0f2f5; }
+        .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; position: relative; touch-action: none; }
+        .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 0.1px solid #f0f0f0; box-sizing: border-box; cursor: pointer; user-select: none; position: relative; }
        
-        /* 미니멀 타일 디자인 */
         .grass-tile { background-color: #3cb371 !important; }
         .unpaved-tile { background-color: #cd853f !important; }
         .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
@@ -26,7 +25,10 @@
         .rail-corner-tile { background-color: #aaa !important; background-image: radial-gradient(circle at 100% 0%, transparent 40%, #444 40%, #444 45%, transparent 45%, transparent 55%, #444 55%, #444 60%, transparent 60%) !important; }
         .river-tile { background-color: #339af0 !important; }
        
-        .building-host { font-size: 50px !important; z-index: 10 !important; overflow: visible !important; pointer-events: none; width: 60px !important; height: 60px !important; }
+        /* 다리 타일 스타일 */
+        .bridge-tile { background-color: #777 !important; background-image: linear-gradient(90deg, #555 10%, transparent 10%, transparent 90%, #555 90%), linear-gradient(0deg, #999 10%, transparent 10%, transparent 90%, #999 90%) !important; }
+
+        .building-host { font-size: 50px !important; z-index: 10 !important; pointer-events: none; width: 60px !important; height: 60px !important; }
         .building-host-3x3 { font-size: 80px !important; width: 90px !important; height: 90px !important; }
 
         #drag-proxy { position: fixed; pointer-events: none; z-index: 5000; opacity: 0.6; display: none; background-color: rgba(255,255,255,0.5); border: 1px solid #4dabf7; }
@@ -40,7 +42,7 @@
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ 살기 좋은 우리 마을 v24</h3>
+        <h3 style="margin: 5px 0; font-size: 14px;">🏙️살기 좋은 우리 마을 ver.26</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
@@ -58,6 +60,7 @@
             {n:"숲", i:"🌲", t:"1x1"}, {n:"꽃", i:"🌸", t:"1x1"}, 
             {n:"잔디", i:"", c:"grass-tile", t:"1x1", hex: "#3cb371"}, {n:"흙바닥", i:"", c:"unpaved-tile", t:"1x1", hex: "#cd853f"},
             {n:"산", i:"⛰️", t:"3x3"}, {n:"강", i:"", c:"river-tile", t:"1x1"}, 
+            {n:"다리", i:"🌉", c:"bridge-tile", t:"1x1"}, // 다리 타일 추가
             {n:"공원", i:"⛲", t:"2x2"}, {n:"놀이터", i:"🛝", t:"2x2"}, {n:"체육시설", i:"🏋️", t:"2x2"}, 
             {n:"도로", i:"", c:"road-tile", t:"1x1"}, {n:"도로곡선", i:"", c:"road-corner-tile", t:"1x1"}, 
             {n:"철도", i:"", c:"rail-tile", t:"1x1"}, {n:"철도곡선", i:"", c:"rail-corner-tile", t:"1x1"}, 
@@ -108,12 +111,12 @@
                         cells[tIdx].dataset.size = s;
                         cells[tIdx].dataset.rotation = info.rot;
                         cells[tIdx].style.transform = `rotate(${info.rot}deg)`;
+                        if (info.className.includes('bridge-tile')) cells[tIdx].dataset.isBridge = "true";
                     }
                 }
             }
         }
 
-        // --- 수정된 데이터 완전 초기화 함수 ---
         function clearTileData(idx) {
             const cell = cells[idx];
             if (!cell || cell.dataset.parentIdx === undefined) return;
@@ -123,13 +126,9 @@
                 for(let cl=0; cl<size; cl++) {
                     const tIdx = pIdx + (r * gridSize) + cl;
                     if(!cells[tIdx]) continue;
-                    cells[tIdx].innerHTML = ""; 
-                    cells[tIdx].className = 'cell';
+                    cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
                     cells[tIdx].style.transform = "rotate(0deg)";
-                    // 모든 데이터 흔적 삭제
-                    delete cells[tIdx].dataset.rotation;
-                    delete cells[tIdx].dataset.parentIdx;
-                    delete cells[tIdx].dataset.size;
+                    delete cells[tIdx].dataset.rotation; delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size; delete cells[tIdx].dataset.isBridge;
                 }
             }
         }
@@ -149,17 +148,10 @@
                     if(c.dataset.parentIdx !== undefined) clearTileData(idx); 
                     return; 
                 }
-
                 if (c.dataset.parentIdx !== undefined) {
                     const pIdx = parseInt(c.dataset.parentIdx);
                     const pCell = cells[pIdx];
-                    dragInfo = {
-                        originIdx: pIdx,
-                        size: pCell.dataset.size,
-                        html: pCell.innerHTML,
-                        className: pCell.className,
-                        rot: pCell.dataset.rotation
-                    };
+                    dragInfo = { originIdx: pIdx, size: pCell.dataset.size, html: pCell.innerHTML, className: pCell.className, rot: pCell.dataset.rotation };
                 }
             };
 
@@ -170,8 +162,7 @@
                     const touch = e.changedTouches ? e.changedTouches[0] : e;
                     const target = document.elementFromPoint(touch.clientX, touch.clientY);
                     const tIdx = target ? parseInt(target.dataset.index) : -1;
-                   
-                    if (tIdx !== -1 && canPlace(tIdx, dragInfo.size)) {
+                    if (tIdx !== -1 && canPlace(tIdx, dragInfo.size, dragInfo.className.includes('bridge-tile'))) {
                         forcePlace(tIdx, dragInfo); 
                     } else {
                         forcePlace(dragInfo.originIdx, dragInfo);
@@ -180,17 +171,11 @@
                     if (c.dataset.parentIdx !== undefined) {
                         const pIdx = parseInt(c.dataset.parentIdx);
                         let nextRot = (parseInt(cells[pIdx].dataset.rotation) + 90) % 360;
-                        cells[pIdx].dataset.rotation = nextRot;
-                        cells[pIdx].style.transform = `rotate(${nextRot}deg)`;
-                    } else if (selected.t !== "eraser") {
+                        cells[pIdx].dataset.rotation = nextRot; cells[pIdx].style.transform = `rotate(${nextRot}deg)`;
+                    } else {
                         let s = selected.t.includes("3x3")?3:selected.t.includes("2x2")?2:1;
-                        if(canPlace(idx, s)) {
-                            const info = {
-                                html: selected.i || "",
-                                className: 'cell ' + (selected.c || ''),
-                                size: s,
-                                rot: globalRot
-                            };
+                        if(canPlace(idx, s, selected.c === 'bridge-tile')) {
+                            const info = { html: selected.i || "", className: 'cell ' + (selected.c || ''), size: s, rot: globalRot };
                             if(s == 2) info.className += ' building-host';
                             if(s == 3) info.className += ' building-host building-host-3x3';
                             forcePlace(idx, info);
@@ -201,45 +186,47 @@
             };
 
             c.addEventListener('mousedown', handleStart);
-            c.addEventListener('touchstart', (e) => { handleStart(e); e.preventDefault(); }, {passive: false});
+            c.addEventListener('touchstart', handleStart);
             c.addEventListener('mouseup', handleEnd);
-            c.addEventListener('touchend', (e) => { handleEnd(e); e.preventDefault(); }, {passive: false});
+            c.addEventListener('touchend', handleEnd);
             cells.push(c);
             bEl.appendChild(c);
         }
 
-        window.addEventListener('mousemove', (e) => handleMove(e));
-        window.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive: false});
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', handleMove, { passive: false });
 
         function handleMove(e) {
             if (!dragInfo) return;
             const touch = e.touches ? e.touches[0] : e;
             const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY);
-
             if (!isDragging && dist > 10) {
                 isDragging = true;
                 clearTileData(dragInfo.originIdx);
                 proxy.style.display = 'block';
-                proxy.innerHTML = dragInfo.html;
-                proxy.className = dragInfo.className;
-                proxy.style.width = (dragInfo.size * 30) + 'px';
-                proxy.style.height = (dragInfo.size * 30) + 'px';
+                proxy.innerHTML = dragInfo.html; proxy.className = dragInfo.className;
+                proxy.style.width = (dragInfo.size * 30) + 'px'; proxy.style.height = (dragInfo.size * 30) + 'px';
                 proxy.style.transform = `rotate(${dragInfo.rot}deg)`;
             }
             if (isDragging) {
+                if (e.cancelable) e.preventDefault();
                 proxy.style.left = (touch.clientX - (dragInfo.size * 15)) + 'px';
                 proxy.style.top = (touch.clientY - (dragInfo.size * 15)) + 'px';
             }
         }
 
-        function canPlace(idx, size) {
+        // --- 다리 타일 예외 처리를 포함한 배치 확인 함수 ---
+        function canPlace(idx, size, isBridgeTarget = false) {
             const s = parseInt(size), row = Math.floor(idx / gridSize), col = idx % gridSize;
             if (row > gridSize - s || col > gridSize - s) return false;
             for(let r=0; r<s; r++) {
                 for(let cl=0; cl<s; cl++) {
                     const target = cells[idx + (r * gridSize) + cl];
-                    // dataset.parentIdx가 존재하면 이미 누군가가 차지한 칸임
-                    if (target.dataset.parentIdx !== undefined) return false;
+                    if (target.dataset.parentIdx !== undefined) {
+                        // 예외: 배치하려는 타일이 다리이고, 타겟이 강 타일인 경우만 허용
+                        if (isBridgeTarget && target.classList.contains('river-tile')) continue;
+                        return false;
+                    }
                 }
             }
             return true;
@@ -248,20 +235,11 @@
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v24_final.png'; a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v26.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
-        function resetBoard() { 
-            if(confirm("초기화할까요?")) { 
-                cells.forEach(c => { 
-                    c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; 
-                    delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size; 
-                }); 
-            } 
-        }
+        function resetBoard() { if(confirm("초기화할까요?")) { cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size; delete c.dataset.isBridge; }); } }
     </script>
 </body>
 </html>
-
-
