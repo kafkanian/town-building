@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>My Town Builder v23</title>
+    <title>My Town Builder v24</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         body { font-family: 'Pretendard', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 0; margin: 0; touch-action: none; overflow-x: hidden; }
@@ -17,7 +17,7 @@
         .board { display: grid; grid-template-columns: repeat(30, 30px); grid-template-rows: repeat(30, 30px); background-color: #dee2e6; border: 5px solid #adb5bd; width: 900px; height: 900px; position: relative; }
         .cell { width: 30px; height: 30px; background-color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 0.1px solid #f0f0f0; box-sizing: border-box; cursor: pointer; user-select: none; }
        
-        /* 타일 스타일 */
+        /* 미니멀 타일 디자인 */
         .grass-tile { background-color: #3cb371 !important; }
         .unpaved-tile { background-color: #cd853f !important; }
         .road-tile { background-color: #333 !important; background-image: linear-gradient(90deg, transparent 45%, #FFD700 45%, #FFD700 55%, transparent 55%) !important; }
@@ -40,7 +40,7 @@
 </head>
 <body>
     <div class="header-ui">
-        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ 살기 좋은 우리 마을 ver.23</h3>
+        <h3 style="margin: 5px 0; font-size: 14px;">🏙️ 살기 좋은 우리 마을 v24</h3>
         <div class="palette" id="palette"></div>
     </div>
     <div class="board-canvas-area" id="capture-area">
@@ -113,6 +113,7 @@
             }
         }
 
+        // --- 수정된 데이터 완전 초기화 함수 ---
         function clearTileData(idx) {
             const cell = cells[idx];
             if (!cell || cell.dataset.parentIdx === undefined) return;
@@ -122,9 +123,13 @@
                 for(let cl=0; cl<size; cl++) {
                     const tIdx = pIdx + (r * gridSize) + cl;
                     if(!cells[tIdx]) continue;
-                    cells[tIdx].innerHTML = ""; cells[tIdx].className = 'cell';
+                    cells[tIdx].innerHTML = ""; 
+                    cells[tIdx].className = 'cell';
                     cells[tIdx].style.transform = "rotate(0deg)";
-                    delete cells[tIdx].dataset.rotation; delete cells[tIdx].dataset.parentIdx; delete cells[tIdx].dataset.size;
+                    // 모든 데이터 흔적 삭제
+                    delete cells[tIdx].dataset.rotation;
+                    delete cells[tIdx].dataset.parentIdx;
+                    delete cells[tIdx].dataset.size;
                 }
             }
         }
@@ -177,7 +182,7 @@
                         let nextRot = (parseInt(cells[pIdx].dataset.rotation) + 90) % 360;
                         cells[pIdx].dataset.rotation = nextRot;
                         cells[pIdx].style.transform = `rotate(${nextRot}deg)`;
-                    } else {
+                    } else if (selected.t !== "eraser") {
                         let s = selected.t.includes("3x3")?3:selected.t.includes("2x2")?2:1;
                         if(canPlace(idx, s)) {
                             const info = {
@@ -232,7 +237,9 @@
             if (row > gridSize - s || col > gridSize - s) return false;
             for(let r=0; r<s; r++) {
                 for(let cl=0; cl<s; cl++) {
-                    if (cells[idx + (r * gridSize) + cl].dataset.parentIdx !== undefined) return false;
+                    const target = cells[idx + (r * gridSize) + cl];
+                    // dataset.parentIdx가 존재하면 이미 누군가가 차지한 칸임
+                    if (target.dataset.parentIdx !== undefined) return false;
                 }
             }
             return true;
@@ -241,11 +248,20 @@
         function saveImage() {
             html2canvas(document.getElementById('capture-area'), {scale: 2}).then(canvas => {
                 const a = document.createElement('a');
-                a.download = 'town_v23_final.png'; a.href = canvas.toDataURL(); a.click();
+                a.download = 'town_v24_final.png'; a.href = canvas.toDataURL(); a.click();
             });
         }
 
-        function resetBoard() { if(confirm("초기화할까요?")) { cells.forEach(c => { c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size; }); } }
+        function resetBoard() { 
+            if(confirm("초기화할까요?")) { 
+                cells.forEach(c => { 
+                    c.className = 'cell'; c.innerHTML = ''; c.style.transform = 'rotate(0deg)'; 
+                    delete c.dataset.rotation; delete c.dataset.parentIdx; delete c.dataset.size; 
+                }); 
+            } 
+        }
     </script>
 </body>
 </html>
+
+
